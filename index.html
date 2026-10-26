@@ -1,0 +1,333 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>Aloe Skins — Заказ</title>
+    <script src="https://telegram.org/js/telegram-web-app.js"></script>
+    <style>
+        :root {
+            --bg: #1a2e26;
+            --card: #233d33;
+            --accent: #a3e635;
+            --text: #ffffff;
+            --text-muted: #9ca3af;
+        }
+        body {
+            font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif;
+            background-color: var(--bg);
+            color: var(--text);
+            margin: 0;
+            padding: 16px;
+            padding-bottom: 90px;
+        }
+        h1, h2, h3 { margin: 0 0 10px 0; }
+        .title { font-size: 24px; font-weight: bold; color: var(--accent); text-transform: uppercase; }
+        .subtitle { font-size: 14px; color: var(--text-muted); margin-bottom: 20px; }
+        
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 10px; margin-bottom: 20px; }
+        .card {
+            background-color: var(--card);
+            border-radius: 12px;
+            padding: 16px;
+            text-align: center;
+            cursor: pointer;
+            border: 2px solid transparent;
+            transition: 0.2s;
+            font-weight: 600;
+        }
+        .card.active { border-color: var(--accent); background-color: rgba(163, 230, 53, 0.1); }
+        
+        .list-item {
+            background-color: var(--card);
+            border-radius: 12px;
+            padding: 16px;
+            margin-bottom: 10px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            cursor: pointer;
+            border: 2px solid transparent;
+        }
+        .list-item.active { border-color: var(--accent); }
+        
+        .hidden { display: none !important; }
+        
+        .bottom-bar {
+            position: fixed;
+            bottom: 0; left: 0; right: 0;
+            background-color: var(--card);
+            padding: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            box-shadow: 0 -4px 12px rgba(0,0,0,0.3);
+            border-top: 1px solid rgba(255,255,255,0.1);
+        }
+        .price { font-size: 20px; font-weight: bold; color: var(--accent); }
+        button {
+            background-color: var(--accent);
+            color: #000;
+            border: none;
+            padding: 12px 24px;
+            border-radius: 8px;
+            font-size: 16px;
+            font-weight: bold;
+            cursor: pointer;
+        }
+        button:disabled { opacity: 0.5; }
+        
+        input {
+            width: 100%;
+            padding: 14px;
+            border-radius: 10px;
+            border: 1px solid var(--text-muted);
+            background-color: var(--card);
+            color: white;
+            font-size: 16px;
+            box-sizing: border-box;
+            margin-bottom: 15px;
+        }
+        
+        .step { margin-bottom: 30px; }
+    </style>
+</head>
+<body>
+
+    <!-- Шаг 1: Устройство -->
+    <div id="step-device" class="step">
+        <div class="title">Что оклеиваем?</div>
+        <div class="subtitle">Выберите тип устройства</div>
+        <div class="grid" id="device-grid">
+            <div class="card" onclick="selectDevice('Телефон', this)">📱 Телефон</div>
+            <div class="card" onclick="selectDevice('Планшет', this)">📟 Планшет</div>
+            <div class="card" onclick="selectDevice('Смарт-часы', this)">⌚ Смарт-часы</div>
+            <div class="card" onclick="selectDevice('Ноутбук', this)">💻 Ноутбук</div>
+            <div class="card" onclick="selectDevice('Прочее', this)">🔧 Прочее</div>
+        </div>
+    </div>
+
+    <!-- Шаг 2: Модель -->
+    <div id="step-model" class="step hidden">
+        <div class="title">Модель</div>
+        <div class="subtitle">Введите модель вашего устройства</div>
+        <input type="text" id="model-input" placeholder="Например, iPhone 13 Pro" oninput="checkModel()">
+        <button style="width: 100%;" onclick="goToZone()">Продолжить</button>
+    </div>
+
+    <!-- Шаг 3: Зона -->
+    <div id="step-zone" class="step hidden">
+        <div class="title">Зона</div>
+        <div class="subtitle">Что именно оклеиваем?</div>
+        <div id="zone-list"></div>
+    </div>
+
+    <!-- Шаг 4: Пленка и Толщина -->
+    <div id="step-film" class="step hidden">
+        <div class="title">Пленка</div>
+        <div class="subtitle">Выберите тип и толщину</div>
+        <div id="film-list"></div>
+        <div id="thickness-list" class="hidden" style="margin-top: 20px;">
+            <div class="subtitle">Толщина пленки:</div>
+            <div class="list-item" onclick="selectThickness('Стандартная плёнка', this)">
+                <span>Стандартная</span>
+                <span class="price-span" id="price-std"></span>
+            </div>
+            <div class="list-item" onclick="selectThickness('Премиум плёнка', this)">
+                <span>Премиум / Противоударная</span>
+                <span class="price-span" id="price-prem"></span>
+            </div>
+        </div>
+    </div>
+
+    <!-- Шаг 5: Номер -->
+    <div id="step-phone" class="step hidden">
+        <div class="title">Почти всё!</div>
+        <div class="subtitle">Оставьте номер для связи</div>
+        <input type="tel" id="phone-input" placeholder="+375 (XX) XXX-XX-XX">
+    </div>
+
+    <!-- Нижняя панель -->
+    <div class="bottom-bar">
+        <div>
+            <div style="font-size: 12px; color: var(--text-muted);">Итого:</div>
+            <div class="price" id="total-price">0 BYN</div>
+        </div>
+        <button id="next-btn" onclick="nextStep()">Далее</button>
+    </div>
+
+    <script>
+        // Инициализация Telegram
+        let tg = window.Telegram.WebApp;
+        tg.expand(); // Развернуть на весь экран
+        tg.setHeaderColor('#1a2e26');
+
+        // Данные
+        const PRICES = {
+            "Телефон": { "Экран": [35, 60], "Корпус": [50, 80], "Комплект": [80, 130] },
+            "Планшет": { "Экран": [75, 100], "Корпус": [80, 110], "Комплект": [150, 190] },
+            "Смарт-часы": { "Экран": [25, 40], "Корпус": [40, 60], "Комплект": [60, 80] },
+            "Ноутбук": { "Экран": [85, 120], "Верхняя крышка": [85, 120], "Нижняя крышка": [85, 120], "TouchPad": [40, 40], "Комплект": [280, 340] },
+            "Прочее": { "Чистка динамиков": [15, 15], "Автомультимедиа": [60, 60], "Торцы": [20, 40], "Линзы": [20, 20], "Кейс наушников": [45, 45] }
+        };
+        const ZONES = {
+            "Телефон": ["Экран", "Корпус", "Комплект"],
+            "Планшет": ["Экран", "Корпус", "Комплект"],
+            "Смарт-часы": ["Экран", "Корпус", "Комплект"],
+            "Ноутбук": ["Экран", "Верхняя крышка", "Нижняя крышка", "TouchPad", "Комплект"],
+            "Прочее": ["Чистка динамиков", "Автомультимедиа", "Торцы", "Линзы", "Кейс наушников"]
+        };
+        const NO_VINYL = ["Экран", "Корпус", "Верхняя крышка", "Нижняя крышка"];
+
+        // Состояние
+        let state = {
+            step: 1,
+            device: null, model: null, zone: null, film: null, thickness: null, phone: null,
+            price: 0
+        };
+
+        // --- Шаг 1: Устройство ---
+        function selectDevice(device, el) {
+            document.querySelectorAll('#device-grid .card').forEach(c => c.classList.remove('active'));
+            el.classList.add('active');
+            state.device = device;
+            setTimeout(() => {
+                document.getElementById('step-device').classList.add('hidden');
+                document.getElementById('step-model').classList.remove('hidden');
+                state.step = 2;
+            }, 200);
+        }
+
+        // --- Шаг 2: Модель ---
+        function checkModel() {
+            state.model = document.getElementById('model-input').value;
+        }
+        function goToZone() {
+            if (!state.model) return tg.showAlert("Введите модель устройства");
+            renderZones();
+            document.getElementById('step-model').classList.add('hidden');
+            document.getElementById('step-zone').classList.remove('hidden');
+            state.step = 3;
+        }
+
+        // --- Шаг 3: Зона ---
+        function renderZones() {
+            const list = document.getElementById('zone-list');
+            list.innerHTML = '';
+            ZONES[state.device].forEach(zone => {
+                const div = document.createElement('div');
+                div.className = 'list-item';
+                div.innerHTML = `<span>${zone}</span>`;
+                div.onclick = () => selectZone(zone, div);
+                list.appendChild(div);
+            });
+        }
+
+        function selectZone(zone, el) {
+            document.querySelectorAll('#zone-list .list-item').forEach(c => c.classList.remove('active'));
+            el.classList.add('active');
+            state.zone = zone;
+            renderFilms();
+            setTimeout(() => {
+                document.getElementById('step-zone').classList.add('hidden');
+                document.getElementById('step-film').classList.remove('hidden');
+                state.step = 4;
+            }, 200);
+        }
+
+        // --- Шаг 4: Пленка и Толщина ---
+        function renderFilms() {
+            const list = document.getElementById('film-list');
+            list.innerHTML = '';
+            
+            // Полиуретан
+            let div1 = document.createElement('div');
+            div1.className = 'list-item';
+            div1.innerHTML = `<span>Полиуретановая</span>`;
+            div1.onclick = () => selectFilm('ПОЛЕУРЕТАНОВАЯ ПЛЕНКА', div1);
+            list.appendChild(div1);
+
+            // Винил (если разрешен)
+            if (!NO_VINYL.includes(state.zone)) {
+                let div2 = document.createElement('div');
+                div2.className = 'list-item';
+                div2.innerHTML = `<span>Виниловая</span>`;
+                div2.onclick = () => selectFilm('ВИНИЛОВАЯ ПЛЕНКА', div2);
+                list.appendChild(div2);
+            }
+            
+            document.getElementById('thickness-list').classList.add('hidden');
+            updateBottomBar();
+        }
+
+        function selectFilm(film, el) {
+            document.querySelectorAll('#film-list .list-item').forEach(c => c.classList.remove('active'));
+            el.classList.add('active');
+            state.film = film;
+            state.thickness = null;
+            state.price = 0;
+            
+            // Показываем цены
+            const prices = PRICES[state.device][state.zone];
+            document.getElementById('price-std').innerText = prices[0] + " BYN";
+            document.getElementById('price-prem').innerText = prices[1] + " BYN";
+            
+            document.getElementById('thickness-list').classList.remove('hidden');
+            document.getElementById('next-btn').disabled = true;
+            updateBottomBar();
+        }
+
+        function selectThickness(thickness, el) {
+            document.querySelectorAll('#thickness-list .list-item').forEach(c => c.classList.remove('active'));
+            el.classList.add('active');
+            state.thickness = thickness;
+            
+            const prices = PRICES[state.device][state.zone];
+            state.price = thickness === 'Стандартная плёнка' ? prices[0] : prices[1];
+            
+            document.getElementById('next-btn').disabled = false;
+            updateBottomBar();
+        }
+
+        // --- Навигация и отправка ---
+        function nextStep() {
+            if (state.step === 4) {
+                if (!state.thickness) return tg.showAlert("Выберите толщину пленки");
+                document.getElementById('step-film').classList.add('hidden');
+                document.getElementById('step-phone').classList.remove('hidden');
+                document.getElementById('next-btn').innerText = "Отправить заказ";
+                document.getElementById('total-price').innerText = state.price + " BYN";
+                state.step = 5;
+            } else if (state.step === 5) {
+                state.phone = document.getElementById('phone-input').value;
+                if (!state.phone) return tg.showAlert("Введите номер телефона");
+                submitOrder();
+            }
+        }
+
+        function updateBottomBar() {
+            if (state.price > 0) {
+                document.getElementById('total-price').innerText = state.price + " BYN";
+            } else {
+                document.getElementById('total-price').innerText = "0 BYN";
+            }
+        }
+
+        function submitOrder() {
+            const data = {
+                action: "new_order",
+                device: state.device,
+                model: state.model,
+                zone: state.zone,
+                film: state.film,
+                thickness: state.thickness,
+                price: state.price,
+                phone: state.phone
+            };
+            // Отправляем данные боту
+            tg.sendData(JSON.stringify(data));
+            tg.close();
+        }
+    </script>
+</body>
+</html>
